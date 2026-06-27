@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVA AI | Personal Health Profile</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --accent-blue: #38bdf8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 550px;
+            margin: auto;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+
+        .nav-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .nav-link:hover { text-decoration: underline; }
+
+        h2 { margin-top: 0; font-weight: 800; color: #f8fafc; }
+
+        .info-card {
+            background: rgba(51, 65, 85, 0.4);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .label { color: #94a3b8; font-size: 14px; font-weight: bold; text-transform: uppercase; }
+        .value { font-size: 18px; font-weight: bold; color: var(--accent-blue); }
+
+        .chart-box {
+            margin-top: 30px;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .no-data {
+            padding: 40px;
+            color: #ef4444;
+            font-weight: bold;
+            border: 1px dashed #ef4444;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <a href="index.html" class="nav-link">⬅ Back to Dashboard</a>
+    
+    <h2>📊 Patient Analytics</h2>
+    <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Secure Health Profile: #NOVA-9921</p>
+
+    <div id="info">
+        </div>
+
+    <div class="chart-box" id="chartWrapper" style="display:none;">
+        <h5 style="margin-bottom: 15px; font-size: 16px; color: #94a3b8;">Risk Distribution (%)</h5>
+        <canvas id="pieChart"></canvas>
+    </div>
+</div>
+
+<script>
+// 1. Pull the live prediction data that was saved by risk.html
+let healthData = JSON.parse(localStorage.getItem("riskData"));
+
+const infoDiv = document.getElementById("info");
+const chartWrapper = document.getElementById("chartWrapper");
+
+// 2. If no data exists yet, show a clean warning message
+if (!healthData) {
+    infoDiv.innerHTML = `
+        <div class="no-data">
+            ⚠️ No Clinical Data Found<br>
+            <span style="font-size:12px; color:#94a3b8; font-weight:normal;">
+                Please run a 'Disease Predictor' analysis first to generate your profile.
+            </span>
+        </div>`;
+} else {
+    // 3. Data found! Show the Chart Wrapper
+    chartWrapper.style.display = "block";
+
+    // 4. Inject the exact predicted numbers into the HTML cards
+    infoDiv.innerHTML = `
+        <div class="info-card"><span class="label">Body Mass Index</span> <span class="value">${healthData.BMI}</span></div>
+        <div class="info-card"><span class="label">Diabetes Status</span> <span class="value" style="color:#38bdf8;">${healthData.Diabetes.risk}</span></div>
+        <div class="info-card"><span class="label">Heart Condition</span> <span class="value" style="color:#ef4444;">${healthData["Heart Disease"].risk}</span></div>
+        <div class="info-card"><span class="label">Obesity Class</span> <span class="value" style="color:#facc15;">${healthData.Obesity.risk}</span></div>
+    `;
+
+    // 5. Draw the Pie Chart using the predicted probability percentages
+    new Chart(document.getElementById("pieChart"), {
+        type: "pie",
+        data: {
+            labels: ["Diabetes Prob.", "Heart Prob.", "Obesity Prob."],
+            datasets: [{
+                data: [
+                    healthData.Diabetes.probability,
+                    healthData["Heart Disease"].probability,
+                    healthData.Obesity.probability
+                ],
+                backgroundColor: [
+                    '#38bdf8', // Neon Blue for Diabetes
+                    '#ef4444', // Neon Red for Heart
+                    '#facc15'  // Neon Yellow for Obesity
+                ],
+                borderColor: '#1e293b',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#94a3b8', font: { family: 'Inter' } }
+                }
+            }
+        }
+    });
+}
+</script>
+
+</body>
+</html>

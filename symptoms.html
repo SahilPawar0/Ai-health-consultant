@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symptom Checker | NOVA AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
+            --alert-red: #ef4444;
+        }
+        body {
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at bottom left, #1e293b, #0f172a);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            padding: 40px 0;
+        }
+        .glass-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 900px;
+            margin: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            font-weight: 800;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+        }
+        
+        /* Search Bar & Voice Input Flexbox */
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .search-box {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            width: 100%;
+            transition: 0.3s;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        }
+        .search-box::placeholder { color: #94a3b8; }
+
+        /* Mic Button Styles & Animation */
+        .btn-mic {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 12px;
+            color: white;
+            width: 60px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-mic:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--accent-blue);
+        }
+        .listening {
+            animation: pulseMic 1.5s infinite;
+            background: rgba(239, 68, 68, 0.2) !important;
+            border-color: var(--alert-red) !important;
+        }
+        @keyframes pulseMic {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Emergency Protocol Banner */
+        .emergency-banner {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--alert-red);
+            color: #fca5a5;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+            animation: pulseWarning 2s infinite;
+        }
+        @keyframes pulseWarning {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .symptom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 12px;
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin: 15px 0 25px 0;
+        }
+        .symptom-grid::-webkit-scrollbar { width: 8px; }
+        .symptom-grid::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+        .symptom-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
+
+        .symptom-label {
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .symptom-label:hover { background: rgba(56, 189, 248, 0.1); }
+        input[type="checkbox"] { margin-right: 10px; accent-color: var(--accent-blue); }
+
+        .btn-predict {
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-weight: 700;
+            color: white;
+            transition: transform 0.2s;
+        }
+        .btn-predict:hover { transform: scale(1.05); color: white; }
+        
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 15px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+
+        .remedy-box {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .remedy-list {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 14px;
+            color: #dcfce7;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="glass-container">
+        <a href="index.html" class="text-secondary text-decoration-none mb-3 d-block">⬅ Back to Hub</a>
+        <h1>Symptom Classifier</h1>
+        <p class="text-secondary">Select your symptoms manually or use Voice Assistant 🎙️.</p>
+
+        <div id="emergencyWarning" class="emergency-banner">
+            <strong>⚠️ CRITICAL SYMPTOM DETECTED:</strong> High-risk symptom logged. Please visit the nearest Emergency Room or use our Healthcare Locator immediately.
+        </div>
+
+        <form id="symptomForm">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search symptoms (e.g., headache, cough)...">
+                <button type="button" id="voiceBtn" class="btn-mic" title="Speak your symptoms">🎙️</button>
+            </div>
+
+            <div class="symptom-grid" id="symptomContainer"></div>
+            <div class="text-center mt-2">
+                <button type="button" class="btn btn-predict" onclick="predictDisease()">Analyze Symptoms</button>
+            </div>
+        </form>
+
+        <div id="result"></div>
+    </div>
+</div>
+
+<script>
+    const symptoms = [
+        "itching", "skin_rash", "continuous_sneezing", "shivering", "chills", "joint_pain",
+        "stomach_pain", "acidity", "vomiting", "fatigue", "weight_gain", "anxiety",
+        "weight_loss", "restlessness", "lethargy", "cough", "high_fever", "breathlessness",
+        "sweating", "dehydration", "indigestion", "headache", "yellowish_skin", "dark_urine",
+        "nausea", "loss_of_appetite", "pain_behind_the_eyes", "back_pain", "constipation",
+        "abdominal_pain", "diarrhoea", "mild_fever", "yellowing_of_eyes",
+        "blurred_and_distorted_vision", "phlegm", "throat_irritation", "redness_of_eyes",
+        "sinus_pressure", "runny_nose", "congestion", "chest_pain", "weakness_in_limbs",
+        "fast_heart_rate", "neck_pain", "dizziness", "cramps", "bruising", "obesity",
+        "swollen_legs", "slurred_speech", "knee_pain", "muscle_weakness", "stiff_neck",
+        "loss_of_balance", "depression", "irritability", "muscle_pain", "belly_pain",
+        "watering_from_eyes", "lack_of_concentration"
+    ];
+
+    const criticalSymptoms = ["chest_pain", "breathlessness", "slurred_speech", "fast_heart_rate", "loss_of_balance"];
+
+    const remediesDB = {
+        "Allergy": ["Identify and avoid the allergen trigger", "Take over-the-counter antihistamines", "Apply calamine lotion for skin rashes", "Keep windows closed during high pollen seasons"],
+        "Fungal infection": ["Keep the affected area clean and dry", "Use over-the-counter antifungal creams", "Wear loose-fitting clothes", "Avoid sharing personal items"],
+        "GERD": ["Avoid spicy, acidic, and fatty foods", "Eat smaller meals throughout the day", "Do not lie down immediately after eating", "Elevate the head of your bed"],
+        "Diabetes ": ["Monitor blood sugar levels daily", "Maintain a balanced, low-sugar diet", "Engage in regular physical exercise", "Take prescribed insulin or medications strictly"],
+        "Common Cold": ["Drink plenty of warm fluids", "Get adequate rest and sleep", "Gargle with warm salt water for sore throat", "Use saline nasal drops for congestion"],
+        "Migraine": ["Rest in a quiet, dark room", "Apply a cold compress to the forehead", "Stay hydrated and avoid caffeine", "Take prescribed pain relievers early"],
+        "Acne": ["Wash your face twice daily with a gentle cleanser", "Avoid popping or squeezing pimples", "Use non-comedogenic makeup", "Apply over-the-counter benzoyl peroxide"],
+        "Hypertension ": ["Reduce salt intake in your diet", "Exercise for at least 30 minutes daily", "Limit alcohol consumption and stop smoking", "Practice stress management like meditation"],
+        "Jaundice": ["Drink plenty of fluids and stay hydrated", "Eat easily digestible foods like fruits and porridge", "Get plenty of rest", "Avoid alcohol and heavy/fatty meals completely"],
+        "Malaria": ["Seek immediate medical attention for antimalarial drugs", "Rest and stay hydrated", "Monitor fever closely", "Use mosquito nets to prevent further bites"],
+        "Chicken pox": ["Apply calamine lotion to relieve itching", "Take oatmeal baths", "Keep fingernails trimmed to avoid scratching", "Rest and isolate to prevent spreading"],
+        "Heart attack": ["Call emergency services (911/112) immediately", "Chew and swallow an aspirin (if not allergic)", "Keep the patient calm and seated", "Perform CPR if the person becomes unconscious"],
+        "Pneumonia": ["Consult a doctor for antibiotics or antiviral medication", "Get plenty of rest to help your body fight the infection", "Drink plenty of fluids to loosen mucus", "Use a humidifier to ease breathing"],
+        "Urinary tract infection": ["Drink plenty of water to flush out bacteria", "Avoid holding in urine; use the bathroom frequently", "Drink unsweetened cranberry juice", "Take prescribed antibiotics to clear the infection"]
+    };
+
+    const defaultRemedy = [
+        "Consult a healthcare professional for an accurate diagnosis",
+        "Get plenty of rest and stay hydrated",
+        "Monitor your symptoms closely",
+        "Do not self-medicate with heavy prescription drugs"
+    ];
+
+    const container = document.getElementById("symptomContainer");
+    const emergencyBanner = document.getElementById("emergencyWarning");
+    const searchInput = document.getElementById("searchInput");
+
+    // Render Checkboxes
+    symptoms.forEach(s => {
+        let label = document.createElement("label");
+        label.className = "symptom-label";
+        label.innerHTML = `<input type="checkbox" value="${s}"> ${s.replaceAll("_"," ").replace(/\b\w/g, c => c.toUpperCase())}`;
+        container.appendChild(label);
+    });
+
+    // SMART SEARCH LOGIC
+    searchInput.addEventListener("input", function(e) {
+        let filter = e.target.value.toLowerCase();
+        let labels = container.getElementsByClassName("symptom-label");
+        
+        for (let i = 0; i < labels.length; i++) {
+            let text = labels[i].textContent || labels[i].innerText;
+            if (text.toLowerCase().indexOf(filter) > -1) {
+                labels[i].style.display = "flex";
+            } else {
+                labels[i].style.display = "none";
+            }
+        }
+    });
+
+    // EMERGENCY PROTOCOL CHECKER
+    function checkEmergencyProtocol() {
+        let checkedInputs = document.querySelectorAll('input[type=checkbox]:checked');
+        let selectedArray = Array.from(checkedInputs).map(cb => cb.value);
+        let hasCritical = selectedArray.some(symptom => criticalSymptoms.includes(symptom));
+        
+        if (hasCritical) {
+            emergencyBanner.style.display = "block";
+        } else {
+            emergencyBanner.style.display = "none";
+        }
+    }
+
+    container.addEventListener('change', function(e) {
+        if(e.target.type === 'checkbox') {
+            checkEmergencyProtocol();
+        }
+    });
+
+    // 🎙️ VOICE ASSISTANT LOGIC (WEB SPEECH API)
+    const voiceBtn = document.getElementById('voiceBtn');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false; // Stops listening after you finish speaking
+        recognition.lang = 'en-US';
+
+        voiceBtn.addEventListener('click', () => {
+            recognition.start();
+            voiceBtn.classList.add('listening');
+            searchInput.placeholder = "Listening... Speak now!";
+        });
+
+        recognition.onresult = (event) => {
+            // Get the transcribed text
+            const transcript = event.results[0][0].transcript.toLowerCase();
+            searchInput.value = `Heard: "${transcript}"`; 
+
+            // Check if transcript matches any symptoms
+            symptoms.forEach(s => {
+                let readableSymptom = s.replaceAll("_", " ");
+                if (transcript.includes(readableSymptom)) {
+                    let checkbox = document.querySelector(`input[value="${s}"]`);
+                    if (checkbox && !checkbox.checked) {
+                        checkbox.checked = true; // Automatically check the box!
+                    }
+                }
+            });
+
+            // Re-run the emergency check just in case they spoke a critical symptom
+            checkEmergencyProtocol(); 
+        };
+
+        recognition.onspeechend = () => {
+            recognition.stop();
+            voiceBtn.classList.remove('listening');
+            setTimeout(() => searchInput.placeholder = "🔍 Search symptoms (e.g., headache, cough)...", 3000);
+        };
+
+        recognition.onerror = (event) => {
+            recognition.stop();
+            voiceBtn.classList.remove('listening');
+            searchInput.placeholder = "Microphone error or not permitted.";
+        };
+    } else {
+        voiceBtn.style.display = 'none'; // Hide if browser doesn't support speech API
+    }
+
+    // ML PREDICTION FETCH
+    async function predictDisease() {
+        let checked = document.querySelectorAll('input[type=checkbox]:checked');
+        let selected = Array.from(checked).map(cb => cb.value);
+        let resultDiv = document.getElementById("result");
+
+        if (selected.length === 0) {
+            alert("⚠️ Please select at least one symptom to run the ML analysis.");
+            return;
+        }
+
+        resultDiv.style.display = "block";
+        resultDiv.innerHTML = "<p class='text-center text-info mb-0'>⏳ Processing ML Prediction Array...</p>";
+
+        try {
+            let res = await fetch("http://127.0.0.1:5000/predict-disease", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ symptoms: selected })
+            });
+            let data = await res.json();
+            
+            if (data.error) {
+                resultDiv.innerHTML = `<p class="text-danger text-center">❌ ${data.error}</p>`;
+                return;
+            }
+
+            let predictedDisease = data.most_likely.disease;
+            let actionPlan = remediesDB[predictedDisease] || defaultRemedy;
+            let remedyListHTML = actionPlan.map(item => `<li>${item}</li>`).join("");
+
+            let outputHTML = `
+                <h4 class="text-success mb-3">Analysis Complete</h4>
+                <div style="border-left: 4px solid #38bdf8; padding-left: 15px; margin-bottom: 20px;">
+                    <h2 style="color: #38bdf8; margin-bottom: 5px;">${predictedDisease}</h2>
+                    <span class="badge bg-primary mb-3" style="font-size: 14px;">Confidence: ${data.most_likely.confidence}%</span>
+                    
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <h6 style="color: #818cf8; font-weight: bold; margin-bottom: 8px;">📖 Clinical Description</h6>
+                        <p style="font-size: 14px; margin: 0; color: #cbd5e1; line-height: 1.5;">
+                            ${data.most_likely.description || "Description currently unavailable."}
+                        </p>
+                    </div>
+
+                    <div class="remedy-box">
+                        <h6 style="color: #4ade80; font-weight: bold; margin-bottom: 10px;">🛡️ Recommended Action Plan</h6>
+                        <ul class="remedy-list">
+                            ${remedyListHTML}
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            if (data.others && data.others.length > 0) {
+                outputHTML += `<h6 class="text-secondary mt-3 mb-2" style="font-size: 14px;">Secondary Predictions:</h6>`;
+                data.others.forEach(item => {
+                    outputHTML += `
+                        <div style="display: flex; justify-content: space-between; padding: 10px; background: rgba(0,0,0,0.2); margin-bottom: 5px; border-radius: 5px; border-left: 2px solid #64748b;">
+                            <span style="color: #e2e8f0;">${item.disease}</span>
+                            <span style="color: #94a3b8; font-weight: bold;">${item.confidence}%</span>
+                        </div>
+                    `;
+                });
+            }
+
+            resultDiv.innerHTML = outputHTML;
+
+        } catch (e) {
+            resultDiv.innerHTML = "<p class='text-danger text-center'>❌ Connection Error. Ensure your Flask backend is running on port 5000.</p>";
+        }
+    }
+</script>
+</body>
+</html>

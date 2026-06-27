@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nearby Healthcare Finder | NOVA AI</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --accent-blue: #38bdf8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            padding: 40px 0;
+        }
+        .glass-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 900px;
+            margin: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        h2 { font-weight: 800; color: var(--accent-blue); margin-bottom: 20px; text-align: center; }
+        
+        .nav-link { color: #3b82f6; text-decoration: none; font-size: 14px; margin-bottom: 15px; display: inline-block;}
+        .nav-link:hover { text-decoration: underline; }
+
+        .controls-grid { display: grid; grid-template-columns: 2fr 1fr auto auto; gap: 10px; margin-bottom: 20px; }
+        
+        input, select {
+            background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color);
+            color: white; border-radius: 10px; padding: 12px; width: 100%;
+        }
+        input:focus, select:focus { border-color: var(--accent-blue); outline: none; }
+        
+        button { padding: 12px 20px; border-radius: 10px; border: none; font-weight: bold; color: white; transition: 0.2s; cursor: pointer; }
+        .btn-search { background: #3b82f6; }
+        .btn-search:hover { background: #2563eb; }
+        .btn-emergency { background: #ef4444; }
+        .btn-emergency:hover { background: #dc2626; }
+
+        #map { height: 400px; width: 100%; border-radius: 15px; border: 1px solid var(--border-color); z-index: 1; margin-bottom: 20px;}
+
+        .results-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        .list-box { background: rgba(15, 23, 42, 0.5); border-radius: 15px; padding: 15px; height: 300px; overflow-y: auto; border: 1px solid var(--border-color);}
+        .list-box::-webkit-scrollbar { width: 6px; }
+        .list-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        
+        .item { background: rgba(51, 65, 85, 0.5); padding: 12px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent;}
+        .item:hover { background: rgba(56, 189, 248, 0.1); border-left: 3px solid var(--accent-blue); }
+
+        .details-box { background: rgba(15, 23, 42, 0.5); border-radius: 15px; padding: 20px; border: 1px dashed #475569; }
+    </style>
+</head>
+<body>
+
+<div class="container glass-container">
+    <a href="index.html" class="nav-link">⬅ Back to Dashboard</a>
+    <h2>🏥 Nearby Healthcare Locator</h2>
+
+    <div class="controls-grid">
+        <input type="text" id="location" placeholder="Enter city or area (e.g. Mumbai)">
+        <select id="typeFilter">
+            <option value="hospital">Hospitals</option>
+            <option value="clinic">Clinics</option>
+            <option value="pharmacy">Pharmacies</option>
+        </select>
+        <button class="btn-search" onclick="searchPlaces()">🔍 Search</button>
+        <button class="btn-emergency" onclick="emergencySearch()">🚨 Emergency Near Me</button>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="results-container">
+        <div class="list-box">
+            <h5 style="color: #94a3b8; font-size: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">Nearby Results</h5>
+            <div id="placeList"><p style="color: #64748b; font-size: 14px;">Search a location to see facilities.</p></div>
+        </div>
+        <div class="details-box" id="detailsBox">
+            <p style="color: #64748b; text-align: center; margin-top: 50px;">Click a facility on the map or list to view contact details.</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    // Initialize Map to user's location (Mumbai)
+    let map = L.map('map').setView([19.0760, 72.8777], 12); 
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+    let markers = [];
+
+    function clearMap() {
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        document.getElementById("placeList").innerHTML = "";
+        document.getElementById("detailsBox").innerHTML = "<p style='color: #64748b; text-align: center; margin-top: 50px;'>Click a facility to view details.</p>";
+    }
+
+    function searchPlaces() {
+        let loc = document.getElementById("location").value.trim();
+        let type = document.getElementById("typeFilter").value;
+
+        if (!loc) { alert("⚠️ Please enter a location first."); return; }
+
+        document.getElementById("placeList").innerHTML = "<p style='color:#38bdf8;'>Geocoding location...</p>";
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${loc}`)
+        .then(res => res.json())
+        .then(data => {
+            // BUG FIX: Added error handling if city is misspelled
+            if (!data || data.length === 0) {
+                document.getElementById("placeList").innerHTML = "<p style='color:#ef4444;'>Location not found. Check spelling.</p>";
+                return;
+            }
+            let lat = data[0].lat;
+            let lon = data[0].lon;
+            map.setView([lat, lon], 14);
+            findPlaces(lat, lon, type);
+        }).catch(() => {
+            document.getElementById("placeList").innerHTML = "<p style='color:#ef4444;'>Network error while searching.</p>";
+        });
+    }
+
+    function findPlaces(lat, lon, type) {
+        clearMap();
+        document.getElementById("placeList").innerHTML = "<p style='color:#38bdf8;'>Scanning OpenStreetMap...</p>";
+
+        // BUG FIX: Changed 'node' to 'nwr' to include large hospital buildings, and added 'out center;'
+        let query = `
+            [out:json];
+            nwr["amenity"="${type}"](around:3000,${lat},${lon});
+            out center;
+        `;
+
+        fetch("https://overpass-api.de/api/interpreter", {
+            method: "POST",
+            body: query
+        })
+        .then(res => res.json())
+        .then(data => {
+            let listDiv = document.getElementById("placeList");
+            listDiv.innerHTML = ""; 
+
+            if (!data.elements || data.elements.length === 0) {
+                listDiv.innerHTML = `<p style='color:#facc15;'>No ${type}s found within 3km.</p>`;
+                return;
+            }
+
+            data.elements.forEach(place => {
+                let name = place.tags.name || `Unnamed ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+                
+                // Handle lat/lon whether it's a node or the center of a building (way/relation)
+                let pLat = place.lat || place.center.lat;
+                let pLon = place.lon || place.center.lon;
+
+                let marker = L.marker([pLat, pLon]).addTo(map).bindPopup(`<b>${name}</b>`);
+                markers.push(marker);
+
+                let item = document.createElement("div");
+                item.className = "item";
+                item.innerHTML = `🩺 <b>${name}</b>`;
+
+                item.onclick = () => {
+                    map.setView([pLat, pLon], 16);
+                    marker.openPopup();
+                    showDetails(place, name);
+                };
+
+                listDiv.appendChild(item);
+            });
+        });
+    }
+
+    function showDetails(place, defaultName) {
+        let name = place.tags.name || defaultName;
+        let pLat = place.lat || place.center.lat;
+        let pLon = place.lon || place.center.lon;
+
+        let html = `<h4 style="color:#38bdf8; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;">${name}</h4>`;
+        
+        if (place.tags["addr:full"] || place.tags["addr:street"]) {
+            let address = place.tags["addr:full"] || `${place.tags["addr:street"] || ''} ${place.tags["addr:city"] || ''}`;
+            html += `<p style="font-size:14px; margin-bottom:5px;"><b>📍 Address:</b> ${address}</p>`;
+        }
+        if (place.tags.phone) html += `<p style="font-size:14px; margin-bottom:5px;"><b>📞 Phone:</b> ${place.tags.phone}</p>`;
+        if (place.tags.opening_hours) html += `<p style="font-size:14px; margin-bottom:5px;"><b>⏰ Hours:</b> ${place.tags.opening_hours}</p>`;
+        if (place.tags.emergency === "yes") html += `<p style="font-size:14px; color:#ef4444; margin-bottom:5px;"><b>🚨 24/7 Emergency Care Available</b></p>`;
+        
+        html += `<a href="https://www.google.com/maps/dir/?api=1&destination=${pLat},${pLon}" target="_blank" class="btn btn-sm btn-outline-info mt-3" style="width:100%; border:1px solid #38bdf8; color:#38bdf8;">Get Directions in Google Maps</a>`;
+
+        document.getElementById("detailsBox").innerHTML = html;
+    }
+
+    function emergencySearch() {
+        if (!navigator.geolocation) { alert("Geolocation not supported ❌"); return; }
+        document.getElementById("placeList").innerHTML = "<p style='color:#ef4444;'>🚨 Detecting exact location...</p>";
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                let lat = position.coords.latitude;
+                let lon = position.coords.longitude;
+                map.setView([lat, lon], 15);
+                L.marker([lat, lon]).addTo(map).bindPopup("📍 You are here").openPopup();
+                findPlaces(lat, lon, "hospital"); // Auto-search hospitals
+            },
+            error => {
+                alert("Location access denied or timed out. Please type your city.");
+                document.getElementById("placeList").innerHTML = "";
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+</script>
+</body>
+</html>

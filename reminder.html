@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <title>Smart Medicine Reminder | NOVA AI</title>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            margin: auto;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+
+        .nav-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            text-align: left;
+            margin-bottom: 15px;
+        }
+        .nav-link:hover { text-decoration: underline; }
+
+        h2 { color: #f8fafc; margin-top: 0; margin-bottom: 25px; font-weight: 700; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+        input:focus { outline: none; border-color: var(--accent-blue); }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: var(--accent-blue);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button:hover { background: #0284c7; color: white; }
+
+        .item {
+            background: rgba(51, 65, 85, 0.5);
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 10px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .delete {
+            background: var(--accent-red);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .taken { color: var(--accent-green); font-weight: bold; }
+        .missed { color: #facc15; font-weight: bold; }
+
+        .btn-take {
+            background: var(--accent-green);
+            color: white;
+            padding: 8px;
+            margin-top: 0;
+            width: auto;
+            font-size: 14px;
+        }
+        .btn-take:hover { background: #16a34a; }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <a href="index.html" class="nav-link">⬅ Back to Dashboard</a>
+    
+    <h2>💊 Smart Medicine Reminder</h2>
+
+    <input type="text" id="medName" placeholder="e.g., Paracetamol (500mg)">
+    <input type="time" id="medTime">
+
+    <button onclick="addReminder()">+ Add Reminder</button>
+
+    <div id="reminderList" style="margin-top: 25px;"></div>
+</div>
+
+<script>
+let reminders = JSON.parse(localStorage.getItem("reminders")) || [];
+
+// 🔔 Request Notification Permission on load
+if ("Notification" in window) {
+    Notification.requestPermission();
+}
+
+// 🛠️ Service Worker Registration
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log("SW not found yet, skipping."));
+}
+
+function addReminder() {
+    let nameInput = document.getElementById("medName");
+    let timeInput = document.getElementById("medTime");
+
+    if (!nameInput.value || !timeInput.value) {
+        alert("⚠️ Please enter both the medicine name and time.");
+        return;
+    }
+
+    let reminder = {
+        name: nameInput.value,
+        time: timeInput.value,
+        taken: false,
+        notified: false // BUG FIX: Added this flag to prevent alarm spam
+    };
+
+    reminders.push(reminder);
+    saveData();
+    renderList();
+
+    // BUG FIX: Clear inputs after adding
+    nameInput.value = "";
+    timeInput.value = "";
+}
+
+function saveData() {
+    localStorage.setItem("reminders", JSON.stringify(reminders));
+}
+
+function renderList() {
+    let list = document.getElementById("reminderList");
+    list.innerHTML = "";
+
+    if(reminders.length === 0) {
+        list.innerHTML = "<p style='color: #94a3b8; font-size: 14px;'>No active reminders.</p>";
+        return;
+    }
+
+    reminders.forEach((r, index) => {
+        list.innerHTML += `
+            <div class="item">
+                <div class="item-header">
+                    <span>💊 ${r.name}</span>
+                    <span class="delete" onclick="deleteReminder(${index})">Delete</span>
+                </div>
+                <div style="color: #cbd5e1; font-size: 15px;">⏰ Scheduled for: <b>${formatTime(r.time)}</b></div>
+                <div class="status-bar">
+                    <span class="${r.taken ? 'taken' : 'missed'}">
+                        ${r.taken ? '✅ Status: Taken' : '⏳ Status: Pending'}
+                    </span>
+                    ${!r.taken ? `<button class="btn-take" onclick="markTaken(${index})">Mark as Taken</button>` : ''}
+                </div>
+            </div>
+        `;
+    });
+}
+
+// Helper function to make 24h time look nice (e.g., 14:00 -> 2:00 PM)
+function formatTime(timeStr) {
+    let [hours, minutes] = timeStr.split(':');
+    let ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12; 
+    return `${hours}:${minutes} ${ampm}`;
+}
+
+function deleteReminder(index) {
+    reminders.splice(index, 1);
+    saveData();
+    renderList();
+}
+
+function markTaken(index) {
+    reminders[index].taken = true;
+    saveData();
+    renderList();
+}
+
+function playSound() {
+    let audio = new Audio("https://www.soundjay.com/buttons/sounds/button-09.mp3");
+    audio.play().catch(e => console.log("Browser blocked auto-play sound."));
+}
+
+// ⏰ The Alarm Engine
+setInterval(() => {
+    let now = new Date();
+    let currentTime = now.toTimeString().slice(0,5); // Gets "HH:MM"
+
+    reminders.forEach((r, index) => {
+        // BUG FIX: Only trigger if time matches, it hasn't been taken, AND we haven't already notified them this minute
+        if (r.time === currentTime && !r.taken && !r.notified) {
+            
+            playSound(); // BUG FIX: Now the sound actually plays!
+
+            if (Notification.permission === "granted") {
+                new Notification("💊 NOVA Alert", { body: `It's time to take your medication: ${r.name}` });
+            } else {
+                alert(`💊 ALERT: It's time to take your medication: ${r.name}`);
+            }
+
+            reminders[index].notified = true; // Mark as notified so it doesn't ring 60 times
+            saveData();
+        }
+
+        // Reset the 'notified' flag once the minute has passed, so the alarm works again tomorrow
+        if (r.time !== currentTime && r.notified && !r.taken) {
+            reminders[index].notified = false;
+            saveData();
+        }
+    });
+
+}, 1000); // Check every second for exact precision
+
+// Load on start
+renderList();
+</script>
+
+</body>
+</html>

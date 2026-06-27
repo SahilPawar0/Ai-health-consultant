@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVA AI | Health Consultant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+        .chat-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 900px;
+            margin: 20px auto;
+            width: 95%;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(15px);
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .chat-header {
+            padding: 20px;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 800;
+        }
+        .voice-toggle {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .voice-toggle:hover { background: rgba(0,0,0,0.4); }
+
+        #chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+        }
+        #chat-box::-webkit-scrollbar { width: 6px; }
+        #chat-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+
+        .msg {
+            max-width: 75%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            font-size: 15px;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .user-msg {
+            align-self: flex-end;
+            background: #38bdf8;
+            color: #0f172a;
+            font-weight: 600;
+            border-bottom-right-radius: 4px;
+        }
+        .bot-msg {
+            align-self: flex-start;
+            background: rgba(30, 41, 59, 0.9);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 4px;
+        }
+        .emergency-msg {
+            background: rgba(239, 68, 68, 0.2) !important;
+            border: 1px solid #ef4444 !important;
+            color: #fca5a5 !important;
+        }
+
+        /* Quick Action Chips */
+        .chip-container {
+            display: flex;
+            gap: 10px;
+            padding: 10px 20px;
+            overflow-x: auto;
+            background: rgba(15, 23, 42, 0.6);
+        }
+        .chip-container::-webkit-scrollbar { display: none; }
+        .chip {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #38bdf8;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .chip:hover { background: #38bdf8; color: #0f172a; }
+
+        .input-group {
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 10px;
+        }
+        #user-input {
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 12px;
+            flex: 1;
+        }
+        #user-input:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.2); }
+        
+        .btn-action {
+            border: none;
+            border-radius: 12px;
+            padding: 0 20px;
+            font-weight: bold;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-mic { background: #334155; color: white; width: 50px; cursor: pointer; }
+        .btn-mic:hover { background: #475569; }
+        .btn-mic.listening {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); } 70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } }
+
+        .btn-send { background: linear-gradient(135deg, #38bdf8, #2563eb); color: white; cursor: pointer;}
+        .btn-send:hover { transform: scale(1.05); }
+
+    </style>
+</head>
+<body>
+
+<div class="chat-wrapper">
+    <div class="chat-header">
+        <span>NOVA HEALTH CONSULTANT</span>
+        <button id="voiceToggle" class="voice-toggle" onclick="toggleVoice()">🔊 Voice: ON</button>
+    </div>
+    
+    <div id="chat-box">
+        <div class="msg bot-msg">Hello! I am NOVA. I can help you analyze symptoms, predict health risks, or suggest diet plans. How can I assist you today?</div>
+    </div>
+
+    <div class="chip-container">
+        <div class="chip" onclick="useChip('I have a high fever and headache. What should I do?')">🤒 Fever & Headache</div>
+        <div class="chip" onclick="useChip('What is a good high-protein diet plan?')">🥗 Diet Plan</div>
+        <div class="chip" onclick="useChip('How do I calculate my BMI?')">⚖️ Calculate BMI</div>
+        <div class="chip" onclick="useChip('What are the symptoms of Dengue?')">🦟 Dengue Symptoms</div>
+    </div>
+
+    <div class="input-group">
+        <button id="micBtn" class="btn-action btn-mic" title="Voice Typing">🎙️</button>
+        <input type="text" id="user-input" placeholder="Type or speak your health query..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <button class="btn-action btn-send" onclick="sendMessage()">SEND</button>
+    </div>
+</div>
+
+<script>
+    let botVoiceEnabled = true;
+
+    function toggleVoice() {
+        botVoiceEnabled = !botVoiceEnabled;
+        document.getElementById("voiceToggle").innerText = botVoiceEnabled ? "🔊 Voice: ON" : "🔇 Voice: OFF";
+        if (!botVoiceEnabled) window.speechSynthesis.cancel(); // Stop speaking immediately if turned off
+    }
+
+    function useChip(text) {
+        document.getElementById("user-input").value = text;
+        sendMessage();
+    }
+
+    // --- TEXT TO SPEECH (BOT VOICE) ---
+    function speakText(text) {
+        if (!botVoiceEnabled || !('speechSynthesis' in window)) return;
+        
+        // Remove emojis and special characters for smoother speech
+        let cleanText = text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+        
+        let utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'en-US';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.1; // Slightly friendly pitch
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // --- SPEECH TO TEXT (VOICE TYPING) ---
+    const micBtn = document.getElementById('micBtn');
+    const inputField = document.getElementById('user-input');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = 'en-US';
+
+        micBtn.addEventListener('click', () => {
+            recognition.start();
+            micBtn.classList.add('listening');
+            inputField.placeholder = "Listening...";
+        });
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            inputField.value = transcript;
+            setTimeout(sendMessage, 500); // Auto-send after 0.5s
+        };
+
+        recognition.onspeechend = () => {
+            recognition.stop();
+            micBtn.classList.remove('listening');
+            inputField.placeholder = "Type or speak your health query...";
+        };
+
+        recognition.onerror = () => {
+            recognition.stop();
+            micBtn.classList.remove('listening');
+            inputField.placeholder = "Microphone error. Please type.";
+        };
+    } else {
+        micBtn.style.display = 'none'; // Hide if browser doesn't support it
+    }
+
+    // --- MAIN CHAT LOGIC ---
+    async function sendMessage() {
+        let input = document.getElementById("user-input");
+        let text = input.value.trim();
+        if(!text) return;
+
+        append("user-msg", text);
+        input.value = "";
+
+        // 🚨 LOCAL EMERGENCY OVERRIDE (Safety Net) 🚨
+        const emergencyKeywords = ["chest pain", "heart attack", "bleeding", "can't breathe", "suicide", "stroke"];
+        let isEmergency = emergencyKeywords.some(keyword => text.toLowerCase().includes(keyword));
+        
+        if (isEmergency) {
+            let warningText = "🚨 EMERGENCY PROTOCOL: Your message indicates a potentially life-threatening condition. Please call emergency services (911/112) or visit the nearest hospital immediately. Do not rely on AI for critical care.";
+            append("bot-msg emergency-msg", warningText);
+            speakText("Emergency protocol activated. Please seek immediate medical attention.");
+            return; // Halt the request to the backend
+        }
+
+        // Show typing indicator
+        let box = document.getElementById("chat-box");
+        let typingDiv = document.createElement("div");
+        typingDiv.className = "msg bot-msg";
+        typingDiv.id = "typing-indicator";
+        typingDiv.innerText = "NOVA is typing...";
+        box.appendChild(typingDiv);
+        box.scrollTop = box.scrollHeight;
+
+        try {
+            let res = await fetch("http://127.0.0.1:5000/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: text })
+            });
+            let data = await res.json();
+            
+            // Remove typing indicator
+            document.getElementById("typing-indicator").remove();
+            
+            append("bot-msg", data.response);
+            speakText(data.response); // Speak the response!
+
+        } catch(e) {
+            document.getElementById("typing-indicator").remove();
+            append("bot-msg", "⚠️ Error: AI server is offline. Please make sure Flask is running.");
+        }
+    }
+
+    function append(type, text) {
+        let box = document.getElementById("chat-box");
+        let div = document.createElement("div");
+        div.className = "msg " + type;
+        
+        // Convert basic markdown/newlines to HTML if needed
+        div.innerHTML = text.replace(/\n/g, "<br>"); 
+        
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
+
+</body>
+</html>

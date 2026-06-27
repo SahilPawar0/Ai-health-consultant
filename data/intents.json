@@ -1,0 +1,24 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": ["Hi", "Hello", "Hey", "Good morning", "Is anyone there?"],
+      "responses": ["Hello! I am your AI Health Assistant. How can I help you today?", "Hi there! What health concerns can I assist you with?"]
+    },
+    {
+      "tag": "fever_advice",
+      "patterns": ["I have a fever", "My body is hot", "I am running a temperature", "Fever remedies"],
+      "responses": ["For a mild fever, make sure to stay hydrated, rest, and you can take over-the-counter medication like Paracetamol. However, if it exceeds 103°F (39.4°C) or lasts more than 3 days, please see a doctor immediately."]
+    },
+    {
+      "tag": "diet_general",
+      "patterns": ["What should I eat to stay healthy?", "Give me a diet plan", "Healthy food tips"],
+      "responses": ["A balanced diet should include lean proteins, whole grains, and plenty of fruits and vegetables. Make sure to stay hydrated by drinking at least 8 glasses of water a day!"]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": ["Bye", "See you later", "Goodbye", "Thanks"],
+      "responses": ["Take care! Stay healthy.", "Goodbye! Reach out if you need more health advice."]
+    }
+  ]
+}

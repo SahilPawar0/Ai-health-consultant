@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Diet & Workout Planner | NOVA AI</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
+            --accent-purple: #a855f7;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at top left, #1e293b, #0f172a);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .glass-container {
+            max-width: 700px;
+            margin: auto;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            padding: 35px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+
+        .nav-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .nav-link:hover { text-decoration: underline; }
+
+        h2 { font-weight: 800; color: var(--accent-green); margin-bottom: 5px; }
+        .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 25px; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            text-align: left;
+        }
+        .full-width { grid-column: span 2; }
+
+        label { font-size: 12px; color: #cbd5e1; font-weight: bold; margin-bottom: 5px; display: block; text-transform: uppercase; }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            box-sizing: border-box;
+            transition: 0.3s;
+        }
+        input:focus, select:focus { border-color: var(--accent-green); outline: none; }
+
+        .btn-predict {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 10px;
+            font-weight: 700;
+            color: white;
+            margin-top: 25px;
+            transition: transform 0.2s;
+            font-size: 16px;
+        }
+        .btn-predict:hover { transform: scale(1.02); color: white; }
+
+        #downloadBtn {
+            background: linear-gradient(135deg, #38bdf8, #2563eb);
+            margin-top: 15px;
+        }
+
+        .result-box {
+            margin-top: 25px;
+            text-align: left;
+            padding: 20px; 
+            background: rgba(15, 23, 42, 0.8); 
+            border-radius: 12px; 
+            border: 1px solid var(--border-color);
+            display: none;
+        }
+
+        /* Macro Cards */
+        .macro-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .macro-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .macro-card h4 { margin: 0; font-weight: 800; font-size: 20px; }
+        .macro-card span { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+
+        /* Workout Plan List */
+        .workout-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+        .workout-list li {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-left: 4px solid var(--accent-purple);
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #e2e8f0;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="glass-container">
+    <a href="index.html" class="nav-link">⬅ Back to Dashboard</a>
+    
+    <h2>Smart Diet & Workout Planner</h2>
+    <p class="subtitle">AI-Driven Metabolic Analysis & Nutritional Programming</p>
+
+    <div class="form-grid">
+        <div>
+            <label>Age (Years)</label>
+            <input type="number" id="age" placeholder="e.g., 20">
+        </div>
+        <div>
+            <label>Gender</label>
+            <select id="gender">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Current Weight (kg)</label>
+            <input type="number" id="weight" placeholder="e.g., 73">
+        </div>
+        <div>
+            <label>Height (cm)</label>
+            <input type="number" id="height" placeholder="e.g., 163">
+        </div>
+
+        <div class="full-width">
+            <label>Daily Activity Level</label>
+            <select id="activity">
+                <option value="1.2">Sedentary (Little to no exercise)</option>
+                <option value="1.375">Lightly Active (Light exercise 1-3 days/week)</option>
+                <option value="1.55">Moderately Active (Moderate exercise 3-5 days/week)</option>
+                <option value="1.725">Very Active (Hard exercise 6-7 days/week)</option>
+            </select>
+        </div>
+
+        <div class="full-width">
+            <label>Primary Fitness Goal</label>
+            <select id="goal">
+                <option value="lose">Lose Weight (Fat Loss Phase)</option>
+                <option value="maintain">Maintain Weight (Body Recomposition)</option>
+                <option value="gain">Build Muscle (Caloric Surplus)</option>
+            </select>
+        </div>
+    </div>
+
+    <button class="btn-predict" onclick="generatePlan()">Generate Personalized Plan</button>
+
+    <div id="result" class="result-box"></div>
+    
+    <button id="downloadBtn" class="btn-predict" onclick="downloadPDF()" style="display: none;">⬇️ Download Nutrition & Training PDF</button>
+</div>
+
+<script>
+function generatePlan() {
+    let age = +document.getElementById("age").value;
+    let weight = +document.getElementById("weight").value;
+    let height = +document.getElementById("height").value;
+    let gender = document.getElementById("gender").value;
+    let activity = +document.getElementById("activity").value;
+    let goal = document.getElementById("goal").value;
+    let resultDiv = document.getElementById("result");
+    let downloadBtn = document.getElementById("downloadBtn");
+
+    if (!age || !weight || !height) {
+        resultDiv.innerHTML = "<p class='text-warning text-center'>⚠️ Please enter your Age, Weight, and Height.</p>";
+        resultDiv.style.display = "block";
+        downloadBtn.style.display = "none";
+        return;
+    }
+
+    // 1. Calculate BMR (Mifflin-St Jeor Equation)
+    let bmr = 0;
+    if (gender === "male") {
+        bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+    } else {
+        bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+    }
+
+    // 2. Calculate TDEE (Total Daily Energy Expenditure)
+    let tdee = bmr * activity;
+
+    // 3. Adjust Calories Based on Goal
+    let targetCalories = 0;
+    let goalText = "";
+    let workoutPlan = "";
+
+    if (goal === "lose") {
+        targetCalories = tdee - 500; // 500 calorie deficit
+        if(targetCalories < 1200) targetCalories = 1200; // Safe minimum
+        goalText = "Fat Loss & Toning";
+        workoutPlan = `
+            <li><b>Mon:</b> Full Body HIIT (30 mins) + Core</li>
+            <li><b>Tue:</b> LISS Cardio (45 mins brisk walk/cycle)</li>
+            <li><b>Wed:</b> Upper Body Strength Training</li>
+            <li><b>Thu:</b> Active Recovery (Yoga/Stretching)</li>
+            <li><b>Fri:</b> Lower Body Strength Training</li>
+            <li><b>Sat:</b> LISS Cardio (45 mins)</li>
+            <li><b>Sun:</b> Complete Rest</li>
+        `;
+    } else if (goal === "gain") {
+        targetCalories = tdee + 300; // 300 calorie surplus
+        goalText = "Muscle Hypertrophy & Strength";
+        workoutPlan = `
+            <li><b>Mon:</b> Push Day (Chest, Shoulders, Triceps)</li>
+            <li><b>Tue:</b> Pull Day (Back, Biceps, Rear Delts)</li>
+            <li><b>Wed:</b> Leg Day (Quads, Hamstrings, Calves)</li>
+            <li><b>Thu:</b> Rest / Light Stretching</li>
+            <li><b>Fri:</b> Push Day (Heavy Compound Focus)</li>
+            <li><b>Sat:</b> Pull Day (Hypertrophy Focus)</li>
+            <li><b>Sun:</b> Complete Rest</li>
+        `;
+    } else {
+        targetCalories = tdee;
+        goalText = "Maintenance & Health Optimization";
+        workoutPlan = `
+            <li><b>Mon:</b> Full Body Resistance Training</li>
+            <li><b>Tue:</b> Cardio (30 mins running or swimming)</li>
+            <li><b>Wed:</b> Rest / Mobility Work</li>
+            <li><b>Thu:</b> Full Body Resistance Training</li>
+            <li><b>Fri:</b> Yoga / Pilates</li>
+            <li><b>Sat:</b> Active Hobby (Hiking, Sports, etc.)</li>
+            <li><b>Sun:</b> Complete Rest</li>
+        `;
+    }
+
+    // 4. Calculate Macros (Standard: 30% Protein, 40% Carbs, 30% Fat)
+    let proteinCals = targetCalories * 0.30;
+    let carbCals = targetCalories * 0.40;
+    let fatCals = targetCalories * 0.30;
+
+    let proteinGrams = Math.round(proteinCals / 4);
+    let carbGrams = Math.round(carbCals / 4);
+    let fatGrams = Math.round(fatCals / 9);
+
+    // 5. Render the UI
+    resultDiv.innerHTML = `
+        <h4 class="text-center mb-3" style="font-weight: 800; color: #4ade80;">🥗 Your Nutrition & Training Protocol</h4>
+        
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+            <span style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Daily Caloric Target</span><br>
+            <h2 style="color: #38bdf8; margin: 5px 0; font-weight: 900; font-size: 32px;">${Math.round(targetCalories)} <span style="font-size: 16px; color: #94a3b8;">kcal</span></h2>
+            <span style="font-size: 12px; color: #cbd5e1;">Goal: <b>${goalText}</b></span>
+        </div>
+
+        <h6 style="color: #e2e8f0; font-size: 13px; margin-bottom: 5px;">MACRONUTRIENT SPLIT</h6>
+        <div class="macro-grid">
+            <div class="macro-card">
+                <h4 style="color: #f472b6;">${proteinGrams}g</h4>
+                <span>Protein</span>
+            </div>
+            <div class="macro-card">
+                <h4 style="color: #fbbf24;">${carbGrams}g</h4>
+                <span>Carbs</span>
+            </div>
+            <div class="macro-card">
+                <h4 style="color: #34d399;">${fatGrams}g</h4>
+                <span>Fats</span>
+            </div>
+        </div>
+
+        <h6 style="color: #e2e8f0; font-size: 13px; margin-top: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">💪 7-DAY TRAINING SCHEDULE</h6>
+        <ul class="workout-list">
+            ${workoutPlan}
+        </ul>
+        
+        <p class="text-muted text-center mt-3 mb-0" style="font-size: 11px;">Calculated using the Mifflin-St Jeor Clinical Equation.</p>
+    `;
+
+    resultDiv.style.display = "block";
+    downloadBtn.style.display = "block";
+}
+
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    let reportElement = document.getElementById("result");
+    
+    // Switch to light theme for printing
+    let originalBg = reportElement.style.background;
+    let originalColor = reportElement.style.color;
+    reportElement.style.background = "#ffffff";
+    reportElement.style.color = "#000000";
+
+    // Change specific elements for print visibility
+    let macroCards = reportElement.querySelectorAll('.macro-card');
+    macroCards.forEach(card => { card.style.background = "#f8fafc"; card.style.borderColor = "#e2e8f0"; });
+
+    let workoutItems = reportElement.querySelectorAll('.workout-list li');
+    workoutItems.forEach(item => { item.style.background = "#f1f5f9"; item.style.color = "#0f172a"; });
+
+    setTimeout(() => {
+        html2canvas(reportElement, { scale: 2 }).then(canvas => {
+            let imgData = canvas.toDataURL("image/png");
+            let pdf = new jsPDF("p", "mm", "a4");
+            
+            let imgWidth = 190; 
+            let imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            pdf.setFontSize(18);
+            pdf.text("Personalized Diet & Training Protocol", 15, 20);
+            
+            pdf.addImage(imgData, "PNG", 10, 30, imgWidth, imgHeight);
+            pdf.save(`NOVA_Diet_Training_Plan.pdf`);
+
+            // Revert styles back to dark mode
+            reportElement.style.background = originalBg;
+            reportElement.style.color = originalColor;
+            macroCards.forEach(card => { card.style.background = "rgba(255, 255, 255, 0.05)"; card.style.borderColor = "rgba(255,255,255,0.1)"; });
+            workoutItems.forEach(item => { item.style.background = "rgba(0, 0, 0, 0.2)"; item.style.color = "#e2e8f0"; });
+        });
+    }, 100);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disease Risk Predictor | NOVA AI</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --accent-blue: #38bdf8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .glass-container {
+            max-width: 600px;
+            margin: auto;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            padding: 35px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+
+        .nav-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .nav-link:hover { text-decoration: underline; }
+
+        h2 { font-weight: 800; color: var(--accent-blue); margin-bottom: 5px; }
+        .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 25px; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            text-align: left;
+        }
+        .full-width { grid-column: span 2; }
+
+        label { font-size: 12px; color: #cbd5e1; font-weight: bold; margin-bottom: 5px; display: block; text-transform: uppercase; }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            box-sizing: border-box;
+            transition: 0.3s;
+        }
+        input:focus, select:focus { border-color: var(--accent-blue); outline: none; }
+        input::placeholder { color: #64748b; }
+
+        .btn-predict {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 10px;
+            font-weight: 700;
+            color: white;
+            margin-top: 25px;
+            transition: transform 0.2s;
+            font-size: 16px;
+        }
+        .btn-predict:hover { transform: scale(1.02); color: white; }
+
+        #downloadBtn {
+            background: linear-gradient(135deg, #38bdf8, #2563eb);
+            margin-top: 15px;
+        }
+
+        .result-box {
+            margin-top: 25px;
+            text-align: left;
+            padding: 20px; 
+            background: rgba(15, 23, 42, 0.8); 
+            border-radius: 12px; 
+            border: 1px solid var(--border-color);
+            display: none;
+        }
+
+        .risk-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #334155;
+        }
+        .risk-row:last-child { border-bottom: none; }
+    </style>
+</head>
+
+<body>
+
+<div class="glass-container">
+    <a href="index.html" class="nav-link">⬅ Back to Dashboard</a>
+    
+    <h2>Clinical Risk Predictor</h2>
+    <p class="subtitle">Enter patient vitals for Ensemble ML Risk Analysis</p>
+
+    <div class="form-grid">
+        <div class="full-width">
+            <label>Patient Name</label>
+            <input type="text" id="patientName" placeholder="e.g., Sahil Pawar">
+        </div>
+        
+        <div>
+            <label>Age (Years)</label>
+            <input type="number" id="age" placeholder="e.g., 45">
+        </div>
+        <div>
+            <label>Gender</label>
+            <select id="gender">
+                <option value="">Select...</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Weight (kg)</label>
+            <input type="number" id="weight" placeholder="e.g., 89">
+        </div>
+        <div>
+            <label>Height (cm)</label>
+            <input type="number" id="height" placeholder="e.g., 175">
+        </div>
+
+        <div>
+            <label>Fasting Sugar (mg/dL)</label>
+            <input type="number" id="sugar" placeholder="e.g., 134">
+        </div>
+        <div>
+            <label>Blood Pressure (mmHg)</label>
+            <input type="number" id="bp" placeholder="e.g., 177">
+        </div>
+
+        <div>
+            <label>Do you smoke?</label>
+            <select id="smoking">
+                <option value="">Select...</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+        </div>
+        <div>
+            <label>Exercise Level</label>
+            <select id="exercise">
+                <option value="">Select...</option>
+                <option value="low">Low (Rarely)</option>
+                <option value="moderate">Moderate</option>
+                <option value="high">High (Daily)</option>
+            </select>
+        </div>
+
+        <div class="full-width">
+            <label>Family History of Diabetes/Heart Disease?</label>
+            <select id="family">
+                <option value="">Select...</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+        </div>
+    </div>
+
+    <button class="btn-predict" onclick="predictDiseases()">Run Diagnostic Analysis</button>
+
+    <div id="result" class="result-box"></div>
+    
+    <button id="downloadBtn" class="btn-predict" onclick="downloadPDF()" style="display: none;">⬇️ Download Clinical PDF Report</button>
+</div>
+
+<script>
+function getRiskBadge(riskLevel, percentage) {
+    if (riskLevel.includes("High")) {
+        return `<span class="badge bg-danger p-2">${riskLevel} (${percentage}%)</span>`;
+    } else if (riskLevel.includes("Medium")) {
+        return `<span class="badge bg-warning text-dark p-2">${riskLevel} (${percentage}%)</span>`;
+    } else {
+        return `<span class="badge bg-success p-2">${riskLevel} (${percentage}%)</span>`;
+    }
+}
+
+function predictDiseases() {
+    let name = document.getElementById("patientName").value.trim() || "Guest Patient";
+    let age = +document.getElementById("age").value;
+    let weight = +document.getElementById("weight").value;
+    let height = +document.getElementById("height").value;
+    let sugar = +document.getElementById("sugar").value;
+    let bp = +document.getElementById("bp").value;
+    let gender = document.getElementById("gender").value;
+    let smoking = document.getElementById("smoking").value;
+    let exercise = document.getElementById("exercise").value;
+    let family = document.getElementById("family").value;
+
+    let resultDiv = document.getElementById("result");
+    let downloadBtn = document.getElementById("downloadBtn");
+
+    if (!age || !weight || !height || !sugar || !bp || !gender || !smoking || !exercise || !family) {
+        resultDiv.innerHTML = "<p class='text-warning text-center'>⚠️ Please fill all clinical fields before running the analysis.</p>";
+        resultDiv.style.display = "block";
+        downloadBtn.style.display = "none";
+        return;
+    }
+
+    resultDiv.innerHTML = "<p class='text-info text-center'>⏳ Running Random Forest Analysis...</p>";
+    resultDiv.style.display = "block";
+    downloadBtn.style.display = "none";
+
+    let active = exercise === "low" ? 1 : (exercise === "moderate" ? 2 : 3);
+    let smoke = smoking;
+
+    fetch("http://127.0.0.1:5000/predict-risk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            age: age, weight: weight, height: height, sugar: sugar,
+            bp: bp, family: family, gender: gender, smoke: smoke, active: active
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            resultDiv.innerHTML = `<p class="text-danger text-center">❌ ${data.error}</p>`;
+            return;
+        }
+
+        localStorage.setItem("riskData", JSON.stringify(data));
+
+        resultDiv.innerHTML = `
+            <h4 class="text-center text-primary mb-3" style="font-weight: 800;">🩺 AI Risk Report</h4>
+            
+            <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px;">
+                <strong>Patient:</strong> ${name} <br>
+                <strong>Vitals:</strong> Age ${age} | ${gender} | BMI: <span class="text-info font-weight-bold">${data.BMI}</span>
+            </div>
+            
+            <div class="risk-row">
+                <span>🩸 <strong>Diabetes Risk</strong></span>
+                ${getRiskBadge(data.Diabetes.risk, data.Diabetes.probability)}
+            </div>
+            <div class="risk-row">
+                <span>❤️ <strong>Heart Disease Risk</strong></span>
+                ${getRiskBadge(data["Heart Disease"].risk, data["Heart Disease"].probability)}
+            </div>
+            <div class="risk-row">
+                <span>⚖️ <strong>Obesity Risk</strong></span>
+                ${getRiskBadge(data.Obesity.risk, data.Obesity.probability)}
+            </div>
+            
+            <p class="text-muted text-center mt-3 mb-0" style="font-size: 11px;">Calculated securely by AI Machine Learning Engine</p>
+        `;
+
+        downloadBtn.style.display = "block";
+    })
+    .catch(err => {
+        resultDiv.innerHTML = "<p class='text-danger text-center'>❌ Cannot connect to backend server. Make sure Flask is running.</p>";
+        console.error(err);
+    });
+}
+
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    let reportElement = document.getElementById("result");
+    
+    let originalBg = reportElement.style.background;
+    let originalColor = reportElement.style.color;
+    reportElement.style.background = "#ffffff";
+    reportElement.style.color = "#000000";
+
+    setTimeout(() => {
+        html2canvas(reportElement, { scale: 2 }).then(canvas => {
+            let imgData = canvas.toDataURL("image/png");
+            let pdf = new jsPDF("p", "mm", "a4");
+            
+            let imgWidth = 190; 
+            let imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            pdf.setFontSize(18);
+            pdf.text("Clinical Risk Assessment Report", 15, 20);
+            
+            pdf.addImage(imgData, "PNG", 10, 30, imgWidth, imgHeight);
+            pdf.save(`${document.getElementById("patientName").value || 'Patient'}_Risk_Report.pdf`);
+
+            reportElement.style.background = originalBg;
+            reportElement.style.color = originalColor;
+        });
+    }, 100);
+}
+</script>
+
+</body>
+</html>
